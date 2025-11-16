@@ -1,0 +1,17 @@
+# Configuration optimized for token efficiency
+# Uses concise prompts and minimal output
+
+csv_path: "data/apb/apb_speeches.csv"
+prompt_path: "prompts/variants/concise.yaml"
+output_dir: "analysis_output/concise"
+output_mode: "concise"
+
+min_length: 100
+sample_size: 0
+random_state: 42
+
+max_retries: 3
+temperature: 0.0  # Most deterministic
+
+save_intermediate: true
+batch_size: 20  # Save less frequently

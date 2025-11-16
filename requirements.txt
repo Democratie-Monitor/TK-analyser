@@ -1,0 +1,16 @@
+# TK-Analyser v2 Dependencies
+# Python 3.8+ required
+
+# Core dependencies
+anthropic>=0.39.0      # Claude API client
+pandas>=1.5.0          # Data manipulation
+pyyaml>=6.0            # Configuration files
+tqdm>=4.65.0           # Progress bars
+
+# Optional but recommended
+requests>=2.28.0       # HTTP client (backup)
+
+# Development dependencies (optional)
+# pytest>=7.0.0        # Testing
+# black>=23.0.0        # Code formatting
+# mypy>=1.0.0          # Type checking

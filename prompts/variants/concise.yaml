@@ -1,0 +1,33 @@
+# Concise prompt - Optimized for token efficiency
+# Returns minimal JSON output with just essential findings
+
+name: "concise"
+description: "Token-efficient analysis with minimal output"
+version: "1.0"
+
+system_prompt: |
+  You analyze Dutch parliamentary speeches for delegitimation patterns. Return only JSON.
+
+user_prompt: |
+  Analyze this speech for delegitimation. Return JSON only.
+
+  Types: breakdown_communication, discrediting_information, demonisering, bedreiging
+  Targets: parlement, politici, rechtspraak, media, ambtenaren, minderheden
+  Only report confidence >= 0.7, max 5 cases.
+
+  Output format:
+  {{
+    "cases": [
+      {{
+        "type": "string",
+        "target": "string",
+        "quote": "exact quote",
+        "confidence": 0.0-1.0
+      }}
+    ],
+    "count": 0,
+    "severity": 1-5
+  }}
+
+  Speech:
+  {text}

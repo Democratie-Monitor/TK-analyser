@@ -1,0 +1,64 @@
+# Structured Chain-of-Thought prompt
+# Uses explicit reasoning steps for more reliable analysis
+
+name: "structured_cot"
+description: "Chain-of-thought reasoning with structured analysis steps"
+version: "1.0"
+
+system_prompt: |
+  You analyze Dutch parliamentary speeches for delegitimization using structured reasoning. Follow the analysis steps exactly and return only JSON.
+
+user_prompt: |
+  Analyze this Dutch parliamentary speech for delegitimization patterns using structured reasoning.
+
+  STEP 1 - SCAN: Identify all potentially problematic phrases
+  STEP 2 - CLASSIFY: Match each phrase to delegitimation types
+  STEP 3 - VALIDATE: Check if it meets the threshold (not legitimate criticism)
+  STEP 4 - SCORE: Assign confidence based on clarity
+  STEP 5 - REPORT: Only include confidence >= 0.7
+
+  TYPES:
+  - breakdown_communication: Refusing dialogue/walking out
+  - discrediting_information: Unfounded doubt about facts/experts
+  - demonisering: Personal attacks/ridicule/misrepresentation
+  - bedreiging: Threats against persons/groups
+
+  TARGETS: parlement, politici, rechtspraak, media, ambtenaren, minderheden
+
+  VALIDATION CRITERIA (must pass ALL):
+  1. Is it attacking legitimacy, not just disagreeing?
+  2. Does it lack substantive argumentation?
+  3. Is the target one of the 6 groups?
+  4. Is confidence >= 0.7?
+
+  Return JSON only:
+  {{
+    "analysis_steps": {{
+      "step1_candidates": ["list of potentially problematic phrases found"],
+      "step2_classifications": ["how each was classified"],
+      "step3_validated": ["which passed validation"],
+      "step4_scores": ["confidence scores assigned"]
+    }},
+    "gevonden_delegitimatie": [
+      {{
+        "type": "string",
+        "doelgroep": "string",
+        "citaat": "exact quote",
+        "toelichting": "reasoning for classification",
+        "confidence": 0.7-1.0,
+        "validation_passed": ["list of criteria passed"]
+      }}
+    ],
+    "samenvatting": {{
+      "aantal_gevallen": integer,
+      "meest_voorkomende_type": "string or none",
+      "meest_getroffen_doelgroep": "string or none",
+      "ernst_score": 1-5,
+      "gemiddelde_confidence": float,
+      "hoogste_confidence": float,
+      "laagste_confidence": float
+    }}
+  }}
+
+  SPEECH:
+  {text}

@@ -1,0 +1,17 @@
+# Configuration for detailed analysis with comprehensive reasoning
+# Higher token usage but more thorough analysis
+
+csv_path: "data/apb/apb_speeches.csv"
+prompt_path: "prompts/variants/elaborate.yaml"
+output_dir: "analysis_output/elaborate"
+output_mode: "elaborate"
+
+min_length: 100
+sample_size: 0
+random_state: 42
+
+max_retries: 3
+temperature: 0.1
+
+save_intermediate: true
+batch_size: 5  # Save more frequently due to longer processing

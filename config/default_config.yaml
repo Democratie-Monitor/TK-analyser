@@ -1,0 +1,26 @@
+# Default configuration for TK-Analyser v2
+# Copy this file and modify as needed
+
+# Data paths
+csv_path: "data/apb/apb_speeches.csv"
+prompt_path: "prompts/variants/standard.yaml"
+output_dir: "analysis_output"
+
+# Output mode: concise, standard, or elaborate
+# - concise: Minimal tokens, fast, cheap
+# - standard: Balanced detail and cost
+# - elaborate: Maximum detail, thorough reasoning
+output_mode: "standard"
+
+# Analysis parameters
+min_length: 50          # Minimum speech text length to analyze
+sample_size: 0          # 0 = analyze all, >0 = random sample
+random_state: 42        # Random seed for reproducibility
+
+# API parameters
+max_retries: 3          # Maximum retry attempts on failure
+temperature: 0.1        # Model temperature (lower = more deterministic)
+
+# Processing options
+save_intermediate: true # Save partial results during long runs
+batch_size: 10          # Save every N analyses

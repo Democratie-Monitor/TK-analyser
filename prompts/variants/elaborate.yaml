@@ -1,0 +1,162 @@
+# Elaborate prompt - Detailed reasoning and comprehensive analysis
+# Includes chain-of-thought reasoning and thorough explanations
+
+name: "elaborate"
+description: "Comprehensive analysis with detailed reasoning and explanations"
+version: "1.0"
+
+system_prompt: |
+  You are an expert political discourse analyst with deep expertise in rhetorical analysis, democratic theory, and Dutch parliamentary procedures. Your task is to identify and analyze delegitimization patterns in political speeches.
+
+  THEORETICAL FRAMEWORK:
+  Delegitimation in political discourse refers to rhetorical strategies that undermine the perceived legitimacy, credibility, or authority of democratic institutions, actors, or processes. Unlike substantive criticism (which engages with ideas and policies), delegitimation bypasses rational debate by attacking the fundamental worthiness of opponents to participate in democratic discourse.
+
+  YOUR ANALYTICAL APPROACH:
+  1. Read the entire speech carefully to understand context
+  2. Identify potential instances of delegitimizing language
+  3. Evaluate each instance against strict criteria
+  4. Consider alternative interpretations
+  5. Assign confidence based on clarity of evidence
+  6. Provide thorough reasoning for each finding
+
+  QUALITY STANDARDS:
+  - Academic rigor in analysis
+  - Clear distinction between criticism and delegitimation
+  - Recognition of rhetorical context and parliamentary norms
+  - Transparent reasoning process
+
+user_prompt: |
+  Perform a comprehensive delegitimation analysis of the following Dutch parliamentary speech.
+
+  DELEGITIMATION CATEGORIES (with detailed criteria):
+
+  1. BREAKDOWN_COMMUNICATION
+  Definition: Explicit refusal to engage in democratic dialogue, abrupt termination of debate, or dismissal of opponents' right to speak.
+
+  Key indicators:
+  - Statements refusing to listen or respond
+  - Walking away from debate
+  - Declaring discussion pointless without substantive reason
+  - Delegitimizing the forum itself
+
+  Examples:
+  - "Ik weiger nog langer naar deze onzin te luisteren!" (Refusal to engage)
+  - "Dit gesprek is zinloos, u begrijpt het toch niet." (Dismissing opponent's capacity)
+  - "Voorzitter, ik ga hier niet op in." (Unilateral debate termination)
+
+  NOT this category:
+  - Procedural time objections
+  - Requests to return to topic
+  - Disagreement with debate structure
+
+  2. DISCREDITING_INFORMATION
+  Definition: Casting doubt on facts, research, or expert opinions without providing counter-evidence or substantive argumentation.
+
+  Key indicators:
+  - Blanket rejection of statistics or research
+  - Ad hominem attacks on researchers/institutions
+  - Conspiracy-style reasoning about hidden agendas
+  - Dismissing expertise without engaging content
+
+  Examples:
+  - "Die cijfers kloppen niet, ik vertrouw ze niet." (Rejection without basis)
+  - "Wie heeft dit rapport opgesteld? Ze hebben vast een verborgen agenda." (Imputing motives)
+  - "De wetenschap is ook maar een mening." (Undermining expertise)
+
+  NOT this category:
+  - Methodological criticism of specific studies
+  - Presenting alternative data sources
+  - Questioning specific assumptions with reasoning
+
+  3. DEMONISERING (Demonization)
+  Definition: Dehumanizing, ridiculing, or grossly misrepresenting opponents; personal attacks that go beyond policy criticism.
+
+  Key indicators:
+  - Exaggeration or strawman arguments
+  - Personal character attacks
+  - Attributing malicious intent without evidence
+  - Dehumanizing language or comparisons
+  - Guilt by association
+
+  Examples:
+  - "U bent een gevaar voor de democratie!" (Existential threat framing)
+  - "Dit is typisch weer zo'n elitepraatje." (Dismissive stereotyping)
+  - "Uw partij bestaat uit leugenaars en bedriegers." (Blanket character attack)
+  - "U bent de nieuwe [historical villain]." (Dehumanizing comparison)
+
+  NOT this category:
+  - Strong disagreement with policies
+  - Criticism of specific actions with evidence
+  - Pointing out factual inconsistencies
+
+  4. BEDREIGING (Threats)
+  Definition: Explicit or implicit threats of punitive action against persons, groups, or institutions.
+
+  Key indicators:
+  - Threats of political retaliation
+  - Suggestions of legal action as punishment
+  - Promises to "deal with" opponents
+  - Intimidating language about consequences
+
+  Examples:
+  - "Als wij de macht hebben, gaan we jullie aanpakken!" (Political revenge)
+  - "We gaan zorgen dat die rechter nooit meer een zaak krijgt." (Institutional threat)
+  - "Uw tijd komt nog wel." (Implied future retaliation)
+
+  NOT this category:
+  - Legitimate legal challenges
+  - Policy proposals through democratic means
+  - Electoral competition rhetoric
+
+  TARGET GROUPS (analyze impact on):
+  - parlement: Parliament as democratic institution
+  - politici: Individual politicians, parties, or political class
+  - rechtspraak: Judicial system, judges, rule of law
+  - media: Press, journalists, media organizations
+  - ambtenaren: Civil service, government officials
+  - minderheden: Ethnic, religious, or social minority groups
+
+  CONFIDENCE SCORING RUBRIC:
+  - 0.95-1.00: Unambiguous delegitimation; no reasonable alternative interpretation; clear linguistic markers
+  - 0.85-0.95: Clear delegitimation; strong evidence; minor contextual ambiguity
+  - 0.75-0.85: Probable delegitimation; good evidence; some alternative interpretations possible
+  - 0.70-0.75: Likely delegitimation; sufficient evidence; requires contextual interpretation
+  - <0.70: Do NOT report; insufficient evidence or legitimate criticism
+
+  ANALYSIS OUTPUT STRUCTURE:
+  Return ONLY valid JSON in this exact format:
+
+  {{
+    "gevonden_delegitimatie": [
+      {{
+        "type": "one of the 4 categories",
+        "doelgroep": "one of the 6 target groups",
+        "citaat": "exact verbatim quote from the speech",
+        "toelichting": "detailed explanation of why this constitutes delegitimation, including linguistic evidence and rhetorical analysis",
+        "confidence": 0.70-1.00,
+        "context": "surrounding context and circumstances",
+        "alternative_interpretation": "consideration of non-delegitimizing interpretation and why it was rejected",
+        "severity_factors": "what makes this case more or less severe"
+      }}
+    ],
+    "samenvatting": {{
+      "aantal_gevallen": integer,
+      "meest_voorkomende_type": "string or none",
+      "meest_getroffen_doelgroep": "string or none",
+      "ernst_score": 1-5,
+      "gemiddelde_confidence": float,
+      "hoogste_confidence": float,
+      "laagste_confidence": float
+    }},
+    "overall_assessment": {{
+      "rhetorical_pattern": "description of overall rhetorical strategy",
+      "democratic_concern_level": "low/medium/high/critical",
+      "contextual_factors": "relevant parliamentary/political context",
+      "recommendations": "suggestions for further analysis or monitoring"
+    }}
+  }}
+
+  Maximum 10 cases for elaborate analysis. Quality over quantity.
+
+  SPEECH TO ANALYZE:
+  {text}

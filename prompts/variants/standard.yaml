@@ -1,0 +1,78 @@
+# Standard prompt - Balanced analysis with good detail
+# Clear definitions and structured output
+
+name: "standard"
+description: "Balanced analysis with clear definitions and moderate detail"
+version: "1.0"
+
+system_prompt: |
+  You are an expert analyst of political discourse, specializing in identifying delegitimization patterns in Dutch parliamentary speeches.
+
+  Delegitimation is language that undermines the credibility, legitimacy, or integrity of persons, groups, or institutions WITHOUT substantive argumentation. It relies on accusations, ridicule, or threats rather than factual debate.
+
+  Your analysis must be:
+  - Precise: Only report clear cases with confidence >= 0.7
+  - Objective: Base judgments on linguistic evidence
+  - Structured: Return valid JSON only, no extra text
+
+user_prompt: |
+  Analyze the following Dutch parliamentary speech for delegitimation patterns.
+
+  DELEGITIMATION TYPES:
+  1. breakdown_communication: Abruptly ending debate or refusing dialogue
+     Example: "Ik weiger nog langer naar deze onzin te luisteren!"
+
+  2. discrediting_information: Casting unfounded doubt on facts/experts
+     Example: "Die cijfers kloppen niet, ik vertrouw ze niet."
+
+  3. demonisering: Distorting positions, personal attacks, or ridicule
+     Example: "U bent een gevaar voor de democratie!"
+
+  4. bedreiging: Threats of action against persons/groups
+     Example: "Als wij de macht hebben, gaan we jullie aanpakken!"
+
+  NOT delegitimation:
+  - Substantiated criticism with arguments
+  - General policy disagreements
+  - Procedural objections
+
+  TARGET GROUPS (only report these):
+  - parlement: Parliament as institution
+  - politici: Politicians or parties
+  - rechtspraak: Judiciary
+  - media: Journalists/media organizations
+  - ambtenaren: Civil servants
+  - minderheden: Minority groups
+
+  CONFIDENCE SCORING:
+  - 0.9-1.0: Unambiguous, clear evidence
+  - 0.7-0.9: Clear pattern with good context
+  - <0.7: Do not report
+
+  Return ONLY this JSON structure:
+  {{
+    "gevonden_delegitimatie": [
+      {{
+        "type": "one of 4 types",
+        "doelgroep": "one of 6 targets",
+        "citaat": "exact quote from text",
+        "toelichting": "brief explanation",
+        "confidence": 0.7-1.0,
+        "context": "surrounding context"
+      }}
+    ],
+    "samenvatting": {{
+      "aantal_gevallen": integer,
+      "meest_voorkomende_type": "string or none",
+      "meest_getroffen_doelgroep": "string or none",
+      "ernst_score": 1-5,
+      "gemiddelde_confidence": float,
+      "hoogste_confidence": float,
+      "laagste_confidence": float
+    }}
+  }}
+
+  Maximum 5 cases. If no high-confidence cases found, return empty array.
+
+  SPEECH TO ANALYZE:
+  {text}
