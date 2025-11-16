@@ -1,0 +1,132 @@
+# Elaborate sentiment analysis prompt - Comprehensive analysis
+name: "sentiment_elaborate"
+description: "Comprehensive sentiment analysis with full rhetorical assessment"
+version: "1.0"
+
+system_prompt: |
+  You are an expert political scientist and discourse analyst with deep expertise in:
+  - Sentiment and emotion analysis in political communication
+  - Dutch parliamentary rhetoric and debate traditions
+  - Psychological dimensions of political speech
+  - Persuasion theory and rhetorical strategies
+
+  Your analysis should be academically rigorous, considering:
+  - Linguistic markers of sentiment and emotion
+  - Cultural and political context of Dutch politics
+  - Implicit vs explicit emotional expression
+  - Strategic use of emotional language in parliamentary settings
+
+user_prompt: |
+  Perform a comprehensive sentiment and emotional analysis of this Dutch parliamentary speech.
+
+  ANALYSIS DIMENSIONS:
+
+  1. OVERALL SENTIMENT
+  - Primary sentiment classification (positive/negative/neutral/mixed)
+  - Polarity score (-1 to +1 scale)
+  - Confidence in classification
+  - Temporal sentiment arc (does sentiment change through speech?)
+
+  2. EMOTIONAL PROFILE
+  - Dominant and secondary emotions
+  - Emotion intensity mapping
+  - Emotional triggers and targets
+  - Implicit vs explicit emotional expression
+
+  3. RHETORICAL ANALYSIS
+  - Persuasive strategies employed
+  - Use of pathos (emotional appeals)
+  - Balance of logos (logic) vs pathos
+  - Framing techniques
+
+  4. LINGUISTIC MARKERS
+  - Sentiment-bearing words and phrases
+  - Intensifiers and hedges
+  - Evaluative language
+  - Modal expressions
+
+  5. CONTEXTUAL FACTORS
+  - Stance toward government/opposition
+  - Attitude toward specific policies
+  - Relationship to audience
+  - Strategic communication goals
+
+  Return ONLY this JSON structure:
+
+  {{
+    "overall_sentiment": {{
+      "label": "positive" | "negative" | "neutral" | "mixed",
+      "polarity": -1.0 to 1.0,
+      "confidence": 0.0 to 1.0,
+      "intensity": "weak" | "moderate" | "strong" | "very_strong",
+      "subjectivity": 0.0 to 1.0
+    }},
+    "sentiment_arc": {{
+      "opening": "sentiment at start",
+      "middle": "sentiment in body",
+      "closing": "sentiment at end",
+      "trajectory": "stable" | "escalating" | "de-escalating" | "fluctuating"
+    }},
+    "emotional_profile": {{
+      "dominant_emotion": "string",
+      "secondary_emotions": ["list"],
+      "emotional_intensity": 0.0 to 1.0,
+      "emotion_scores": {{
+        "anger": 0.0,
+        "fear": 0.0,
+        "hope": 0.0,
+        "frustration": 0.0,
+        "confidence": 0.0,
+        "concern": 0.0,
+        "optimism": 0.0,
+        "pessimism": 0.0,
+        "indignation": 0.0,
+        "satisfaction": 0.0
+      }},
+      "emotional_targets": [
+        {{
+          "target": "who/what emotion is directed at",
+          "emotion": "which emotion",
+          "intensity": "weak" | "moderate" | "strong"
+        }}
+      ]
+    }},
+    "rhetorical_analysis": {{
+      "primary_strategy": "confrontational" | "collaborative" | "persuasive" | "defensive" | "informative",
+      "persuasive_techniques": ["list of techniques used"],
+      "pathos_vs_logos": {{
+        "pathos_score": 0.0 to 1.0,
+        "logos_score": 0.0 to 1.0,
+        "balance": "emotion-heavy" | "logic-heavy" | "balanced"
+      }},
+      "formality_level": "very_formal" | "formal" | "neutral" | "informal",
+      "audience_awareness": "high" | "medium" | "low"
+    }},
+    "linguistic_markers": [
+      {{
+        "phrase": "exact quote",
+        "marker_type": "intensifier" | "hedge" | "evaluative" | "modal" | "emotional",
+        "sentiment_contribution": "positive" | "negative" | "neutral",
+        "explanation": "why this phrase is significant"
+      }}
+    ],
+    "contextual_assessment": {{
+      "political_stance": "government" | "opposition" | "neutral",
+      "cooperative_vs_adversarial": -1.0 to 1.0,
+      "policy_sentiment": {{
+        "mentioned_policies": ["list"],
+        "overall_policy_stance": "supportive" | "critical" | "mixed"
+      }},
+      "communication_goal": "inform" | "persuade" | "criticize" | "defend" | "mobilize"
+    }},
+    "summary": {{
+      "brief_assessment": "2-3 sentence summary",
+      "key_finding": "most notable sentiment/emotional characteristic",
+      "comparison_notes": "how this speech compares to typical parliamentary discourse"
+    }}
+  }}
+
+  Provide thorough analysis with maximum 10 linguistic markers.
+
+  SPEECH TO ANALYZE:
+  {text}

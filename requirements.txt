@@ -10,7 +10,43 @@ tqdm>=4.65.0           # Progress bars
 # Optional but recommended
 requests>=2.28.0       # HTTP client (backup)
 
+# ============================================
+# Sentiment Analysis Libraries (Optional)
+# ============================================
+
+# Transformer-based (highest accuracy, requires GPU recommended)
+# transformers>=4.30.0   # HuggingFace transformers
+# torch>=2.0.0           # PyTorch backend
+
+# Specific sentiment models (auto-downloaded via transformers):
+# - DTAI-KULeuven/robbert-v2-dutch-sentiment (93% accuracy, Dutch-specific)
+# - wietsedv/bert-base-dutch-cased-finetuned-sentiment (BERTje)
+# - nlptown/bert-base-multilingual-uncased-sentiment (6 languages)
+
+# Rule-based (fast, lightweight, no GPU needed)
+# pattern>=3.6           # Pattern.nl - Dutch NLP with 4000-word lexicon
+# textblob-nl>=0.0.1     # TextBlob with Dutch analyzer
+# vaderSentiment>=3.3.2  # VADER - English baseline (comparison)
+
+# ============================================
+# Quick Install Commands
+# ============================================
+
+# Minimal (Claude API only):
+# pip install anthropic pandas pyyaml tqdm
+
+# With transformer sentiment analysis (best accuracy):
+# pip install anthropic pandas pyyaml tqdm transformers torch
+
+# With rule-based sentiment analysis (fast, lightweight):
+# pip install anthropic pandas pyyaml tqdm pattern vaderSentiment
+
+# Full installation (all features):
+# pip install anthropic pandas pyyaml tqdm transformers torch pattern textblob-nl vaderSentiment
+
+# ============================================
 # Development dependencies (optional)
+# ============================================
 # pytest>=7.0.0        # Testing
 # black>=23.0.0        # Code formatting
 # mypy>=1.0.0          # Type checking

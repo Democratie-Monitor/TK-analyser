@@ -1,6 +1,6 @@
 # Political Speech Analyzer (TK-Analyser)
 
-A robust tool for analyzing Dutch parliamentary speeches for delegitimization patterns. Version 2 uses the Claude API (Anthropic) with enhanced features for reliability, cost optimization, and prompt experimentation.
+A robust tool for analyzing Dutch parliamentary speeches for delegitimization patterns and sentiment. Version 2 uses the Claude API (Anthropic) with enhanced features for reliability, cost optimization, and prompt experimentation.
 
 ## Features
 
@@ -10,15 +10,27 @@ A robust tool for analyzing Dutch parliamentary speeches for delegitimization pa
 - **Token Usage Tracking**: Monitor costs in real-time
 - **Multiple Output Modes**: Concise (cheap), Standard, or Elaborate (detailed)
 - **Prompt Comparison System**: Test different prompts and compare results
+- **Sentiment Analysis**: Multiple Dutch-optimized sentiment libraries with comparison tools
 - **Batch Processing**: Handle large datasets with progress tracking
 - **Configurable Analysis**: YAML-based configuration for all parameters
 
 ### Analysis Capabilities
+- **Delegitimization Detection**: Identify undermining rhetoric in political discourse
+- **Sentiment Analysis**: Score emotional tone using multiple backends
 - Sample or comprehensive analysis
 - Party-specific analysis
 - Confidence scoring with thresholds
 - Type and target distribution tracking
 - Intermediate result saving for long runs
+
+### Sentiment Analysis Backends
+- **RobBERT v2** - Dutch transformer model (~93% accuracy)
+- **BERTje** - Dutch BERT fine-tuned for sentiment
+- **Multilingual BERT** - Supports 6 languages including Dutch
+- **Pattern.nl** - Rule-based, fast (4000-word Dutch lexicon)
+- **TextBlob-NL** - Dutch Pattern analyzer with TextBlob interface
+- **VADER** - English baseline for comparison
+- **Claude API** - LLM-based sentiment with customizable prompts
 
 ## Quick Start (Version 2 - Claude API)
 
@@ -99,6 +111,99 @@ python claude_analysis.py --config config/concise_config.yaml
 
 # Use elaborate (detailed) config
 python claude_analysis.py --config config/elaborate_config.yaml
+```
+
+## Sentiment Analysis
+
+TK-Analyser includes a comprehensive sentiment analysis system with multiple backends optimized for Dutch text.
+
+### Quick Start - Sentiment Analysis
+
+```bash
+# Install sentiment libraries (choose based on needs)
+pip install transformers torch  # For RobBERT (best accuracy)
+pip install pattern             # For Pattern.nl (fast, lightweight)
+pip install vaderSentiment      # For VADER baseline
+
+# List available backends
+python sentiment_analysis.py --list-backends
+
+# Run sentiment analysis on 10 samples
+python sentiment_analysis.py --sample 10
+
+# Use specific backends
+python sentiment_analysis.py --backends robbert pattern --sample 20
+
+# Add Claude-based sentiment analysis
+python sentiment_analysis.py --claude --claude-prompt prompts/sentiment/standard.yaml --sample 10
+
+# Analyze sentiment by party
+python sentiment_analysis.py --parties PVV VVD CDA
+```
+
+### Compare Sentiment Libraries
+
+Test and evaluate different sentiment analysis backends:
+
+```bash
+# Compare all available backends
+python sentiment_tester.py --samples 10 --min-length 200
+
+# Test specific backends
+python sentiment_tester.py --backends robbert pattern vader --samples 20
+
+# Generate comparison report
+python sentiment_tester.py --samples 15 --output my_sentiment_test.json
+```
+
+This generates reports showing:
+- Inter-backend agreement rates
+- Processing speed per backend
+- Sentiment distribution by party
+- Label consistency analysis
+
+### Sentiment Analysis Backends Comparison
+
+| Backend | Type | Accuracy | Speed | Dutch-Specific | Requirements |
+|---------|------|----------|-------|----------------|--------------|
+| **RobBERT v2** | Transformer | ~93% | Slow | Yes | transformers, torch |
+| **BERTje** | Transformer | High | Slow | Yes | transformers, torch |
+| **Multilingual BERT** | Transformer | Good | Slow | No | transformers, torch |
+| **Pattern.nl** | Rule-based | Moderate | Fast | Yes | pattern |
+| **TextBlob-NL** | Rule-based | Moderate | Fast | Yes | textblob-nl |
+| **VADER** | Rule-based | Low (Dutch) | Very Fast | No | vaderSentiment |
+| **Claude API** | LLM | High | Moderate | Custom | anthropic |
+
+### Sentiment Output Format
+
+```json
+{
+  "speech_metadata": {
+    "speaker_name": "De heer Wilders",
+    "speaker_party": "PVV",
+    "date": "2021-09-23"
+  },
+  "library_results": {
+    "robbert": {
+      "label": "negative",
+      "score": 0.85,
+      "processing_time": 0.234
+    },
+    "pattern": {
+      "label": "negative",
+      "score": 0.72,
+      "raw_scores": {
+        "polarity": -0.44,
+        "subjectivity": 0.65
+      }
+    }
+  },
+  "consensus": {
+    "label": "negative",
+    "confidence": 0.85,
+    "intensity": "strong"
+  }
+}
 ```
 
 ## Output Modes
@@ -222,9 +327,12 @@ Target groups:
 
 ```
 TK-analyser/
-├── claude_analysis.py        # Main analysis script (v2)
+├── claude_analysis.py        # Delegitimization analysis (v2)
 ├── claude_processor.py       # Claude API integration
 ├── prompt_tester.py          # Prompt comparison system
+├── sentiment_analyzer.py     # Multi-backend sentiment analysis
+├── sentiment_analysis.py     # Sentiment analysis runner
+├── sentiment_tester.py       # Sentiment library comparison
 ├── apb_analysis.py           # Original analysis script (v1)
 ├── fireworks_processor.py    # Fireworks AI integration (v1)
 ├── requirements.txt          # Python dependencies
@@ -234,15 +342,20 @@ TK-analyser/
 │   └── elaborate_config.yaml # Detailed analysis config
 ├── prompts/
 │   ├── delegitimatie.yaml    # Original prompt (v1)
-│   └── variants/
-│       ├── concise.yaml      # Minimal token usage
-│       ├── standard.yaml     # Balanced output
-│       ├── elaborate.yaml    # Comprehensive reasoning
-│       └── structured_cot.yaml # Chain-of-thought
+│   ├── variants/             # Delegitimization prompts
+│   │   ├── concise.yaml      # Minimal token usage
+│   │   ├── standard.yaml     # Balanced output
+│   │   ├── elaborate.yaml    # Comprehensive reasoning
+│   │   └── structured_cot.yaml # Chain-of-thought
+│   └── sentiment/            # Sentiment analysis prompts
+│       ├── concise.yaml      # Fast sentiment scoring
+│       ├── standard.yaml     # Balanced sentiment analysis
+│       └── elaborate.yaml    # Comprehensive emotional analysis
 ├── data/
 │   └── apb/
 │       └── apb_speeches.csv  # Speech dataset
-└── analysis_output/          # Results directory
+├── analysis_output/          # Delegitimization results
+└── sentiment_output/         # Sentiment results
 ```
 
 ## Error Handling
@@ -269,6 +382,33 @@ The system tracks token usage and estimates costs:
 # ~350,000 input tokens = $1.05
 # ~120,000 output tokens = $1.80
 # Total ≈ $2.85
+
+# Sentiment analysis (library-based):
+# FREE - no API calls needed
+# RobBERT: ~0.2-0.5s per speech (GPU recommended)
+# Pattern.nl: ~0.01s per speech (CPU only)
+```
+
+## Installation Options
+
+### Minimal (Claude API only)
+```bash
+pip install anthropic pandas pyyaml tqdm
+```
+
+### With Transformer Sentiment (Best Accuracy)
+```bash
+pip install anthropic pandas pyyaml tqdm transformers torch
+```
+
+### With Lightweight Sentiment (Fast, No GPU)
+```bash
+pip install anthropic pandas pyyaml tqdm pattern vaderSentiment
+```
+
+### Full Installation
+```bash
+pip install anthropic pandas pyyaml tqdm transformers torch pattern textblob-nl vaderSentiment
 ```
 
 ## Version 1 (Fireworks AI)

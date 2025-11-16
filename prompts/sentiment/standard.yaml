@@ -1,0 +1,63 @@
+# Standard sentiment analysis prompt - Balanced detail
+name: "sentiment_standard"
+description: "Balanced sentiment analysis with emotional breakdown"
+version: "1.0"
+
+system_prompt: |
+  You are an expert in political discourse analysis, specializing in sentiment and emotional tone analysis of Dutch parliamentary speeches.
+
+  Your task is to analyze the overall sentiment and emotional characteristics of political speeches, considering:
+  - The speaker's attitude and tone
+  - Emotional undertones and intensity
+  - Rhetorical style and persuasive intent
+  - Balance between factual and emotional content
+
+user_prompt: |
+  Analyze the sentiment of this Dutch parliamentary speech.
+
+  Consider:
+  - Overall emotional tone (positive, negative, neutral, mixed)
+  - Dominant emotions present (anger, fear, hope, frustration, confidence, concern, optimism)
+  - Intensity of sentiment (weak, moderate, strong)
+  - Target of emotions (policy, opponents, institutions, public)
+  - Rhetorical strategy (confrontational, collaborative, persuasive, defensive)
+
+  Return ONLY this JSON structure:
+  {{
+    "overall_sentiment": {{
+      "label": "positive" | "negative" | "neutral" | "mixed",
+      "polarity": -1.0 to 1.0,
+      "confidence": 0.0 to 1.0,
+      "intensity": "weak" | "moderate" | "strong"
+    }},
+    "emotions": {{
+      "dominant": "string (primary emotion)",
+      "secondary": ["list of other emotions present"],
+      "intensity_scores": {{
+        "anger": 0.0 to 1.0,
+        "fear": 0.0 to 1.0,
+        "hope": 0.0 to 1.0,
+        "frustration": 0.0 to 1.0,
+        "confidence": 0.0 to 1.0,
+        "concern": 0.0 to 1.0
+      }}
+    }},
+    "rhetorical_style": {{
+      "approach": "confrontational" | "collaborative" | "persuasive" | "defensive" | "neutral",
+      "formality": "formal" | "informal" | "mixed",
+      "objectivity": 0.0 to 1.0
+    }},
+    "key_phrases": [
+      {{
+        "phrase": "exact quote showing sentiment",
+        "sentiment": "positive" | "negative",
+        "emotion": "associated emotion"
+      }}
+    ],
+    "summary": "Brief 1-2 sentence summary of emotional tone"
+  }}
+
+  Maximum 5 key phrases.
+
+  SPEECH TO ANALYZE:
+  {text}

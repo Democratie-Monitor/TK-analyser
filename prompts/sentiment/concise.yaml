@@ -1,0 +1,21 @@
+# Concise sentiment analysis prompt - Minimal tokens
+name: "sentiment_concise"
+description: "Token-efficient sentiment analysis for Dutch political speeches"
+version: "1.0"
+
+system_prompt: |
+  Analyze Dutch political speech sentiment. Return only JSON.
+
+user_prompt: |
+  Analyze this Dutch parliamentary speech for overall sentiment.
+
+  Return JSON only:
+  {{
+    "sentiment": "positive" | "negative" | "neutral" | "mixed",
+    "polarity": -1.0 to 1.0,
+    "confidence": 0.0 to 1.0,
+    "dominant_emotion": "anger" | "fear" | "hope" | "frustration" | "confidence" | "neutral"
+  }}
+
+  Speech:
+  {text}
