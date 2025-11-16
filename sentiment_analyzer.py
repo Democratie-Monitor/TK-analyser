@@ -894,6 +894,65 @@ class DutchSentimentAnalyzer:
         )
 
 
+    def cleanup(self) -> None:
+        """
+        Cleanup resources, unload models from memory.
+
+        Call this when done with sentiment analysis to free GPU/CPU memory.
+        """
+        logger.info("Cleaning up sentiment analyzer resources")
+
+        for name, backend in list(self.backends.items()):
+            try:
+                # Unload transformer pipelines
+                if hasattr(backend, '_pipeline') and backend._pipeline is not None:
+                    logger.debug(f"Unloading {name} pipeline")
+
+                    # Delete the pipeline
+                    del backend._pipeline
+                    backend._pipeline = None
+
+                # Clear any other resources
+                if hasattr(backend, '_analyzer'):
+                    del backend._analyzer
+                    backend._analyzer = None
+
+                if hasattr(backend, '_sentiment_func'):
+                    del backend._sentiment_func
+                    backend._sentiment_func = None
+
+            except Exception as e:
+                logger.error(f"Error cleaning up {name}: {e}")
+
+        # Force garbage collection
+        import gc
+        gc.collect()
+
+        # Clear GPU cache if available
+        try:
+            import torch
+            if torch.cuda.is_available():
+                before = torch.cuda.memory_allocated() / 1024 / 1024
+                torch.cuda.empty_cache()
+                after = torch.cuda.memory_allocated() / 1024 / 1024
+                logger.info(f"GPU cache cleared: {before:.1f}MB -> {after:.1f}MB")
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug(f"Could not clear GPU cache: {e}")
+
+        logger.info("Sentiment analyzer cleanup complete")
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit - cleanup resources."""
+        self.cleanup()
+        return False
+
+
 def check_available_backends() -> None:
     """Print available sentiment analysis backends."""
     print("Dutch Sentiment Analysis Backends:")

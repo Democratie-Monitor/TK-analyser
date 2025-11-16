@@ -10,9 +10,66 @@ Provides consistent logging setup across all modules with:
 
 import logging
 import sys
+import json
 from pathlib import Path
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
+
+
+class JSONFormatter(logging.Formatter):
+    """JSON formatter for structured logging."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format log record as JSON."""
+        log_data = {
+            "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno
+        }
+
+        # Add exception info if present
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+
+        # Add extra fields if present
+        if hasattr(record, 'extra_fields'):
+            log_data.update(record.extra_fields)
+
+        return json.dumps(log_data, default=str)
+
+
+class StructuredLogger(logging.LoggerAdapter):
+    """Logger adapter that supports structured extra fields."""
+
+    def process(self, msg, kwargs):
+        """Add extra fields to log record."""
+        extra = kwargs.get('extra', {})
+        if 'extra_fields' not in extra:
+            extra['extra_fields'] = {}
+
+        # Move any additional kwargs to extra_fields
+        for key in list(kwargs.keys()):
+            if key not in ('exc_info', 'stack_info', 'stacklevel', 'extra'):
+                extra['extra_fields'][key] = kwargs.pop(key)
+
+        kwargs['extra'] = extra
+        return msg, kwargs
+
+    def with_fields(self, **fields) -> 'StructuredLogger':
+        """Create a new logger with additional default fields."""
+        new_extra = dict(self.extra)
+        new_extra.update(fields)
+        return StructuredLogger(self.logger, new_extra)
+
+
+def get_structured_logger(name: str) -> StructuredLogger:
+    """Get a structured logger instance."""
+    base_logger = logging.getLogger(name)
+    return StructuredLogger(base_logger, {})
 
 
 def setup_logging(
@@ -20,7 +77,8 @@ def setup_logging(
     log_file: Optional[str] = None,
     log_dir: str = "logs",
     console: bool = True,
-    format_style: str = "detailed"
+    format_style: str = "detailed",
+    json_output: bool = False
 ) -> None:
     """
     Configure logging for the application.
@@ -31,16 +89,19 @@ def setup_logging(
         log_dir: Directory for log files
         console: Enable console output
         format_style: 'simple' or 'detailed'
+        json_output: Use JSON structured logging
     """
     # Create log directory
     if log_file or log_dir:
         Path(log_dir).mkdir(parents=True, exist_ok=True)
 
     # Set format
-    if format_style == "simple":
-        log_format = "%(levelname)s - %(message)s"
+    if json_output:
+        formatter = JSONFormatter()
+    elif format_style == "simple":
+        formatter = logging.Formatter("%(levelname)s - %(message)s")
     else:
-        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
     # Get numeric level
     numeric_level = getattr(logging, level.upper(), logging.INFO)
@@ -52,7 +113,7 @@ def setup_logging(
     if console:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(numeric_level)
-        console_handler.setFormatter(logging.Formatter(log_format))
+        console_handler.setFormatter(formatter)
         handlers.append(console_handler)
 
     # File handler
@@ -64,10 +125,23 @@ def setup_logging(
 
     file_handler = logging.FileHandler(file_path, encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)  # Always capture DEBUG to file
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
-    ))
+
+    # Use JSON for file if enabled, otherwise detailed format
+    if json_output:
+        file_handler.setFormatter(JSONFormatter())
+    else:
+        file_handler.setFormatter(logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s"
+        ))
     handlers.append(file_handler)
+
+    # Optional: Add JSON log file for structured log aggregation
+    if json_output:
+        json_file_path = file_path.replace('.log', '.jsonl')
+        json_handler = logging.FileHandler(json_file_path, encoding='utf-8')
+        json_handler.setLevel(logging.DEBUG)
+        json_handler.setFormatter(JSONFormatter())
+        handlers.append(json_handler)
 
     # Configure root logger
     logging.basicConfig(
@@ -83,7 +157,7 @@ def setup_logging(
     logging.getLogger("transformers").setLevel(logging.WARNING)
 
     logger = logging.getLogger(__name__)
-    logger.info(f"Logging configured: level={level}, file={file_path}")
+    logger.info(f"Logging configured: level={level}, file={file_path}, json={json_output}")
 
 
 def get_performance_logger(name: str = "performance") -> logging.Logger:
@@ -173,3 +247,76 @@ def log_package_versions() -> None:
             logger.info(f"  {pkg}: {version}")
         except ImportError:
             logger.debug(f"  {pkg}: not installed")
+
+
+class MetricsLogger:
+    """Logger for tracking analysis metrics."""
+
+    def __init__(self, name: str = "metrics"):
+        self.logger = get_structured_logger(f"tk_analyser.{name}")
+        self.metrics = {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "total_tokens": 0,
+            "total_cost": 0.0,
+            "total_processing_time": 0.0
+        }
+
+    def log_request(
+        self,
+        success: bool,
+        tokens: int,
+        cost: float,
+        processing_time: float,
+        **extra
+    ) -> None:
+        """Log a single request with metrics."""
+        self.metrics["total_requests"] += 1
+        if success:
+            self.metrics["successful_requests"] += 1
+        else:
+            self.metrics["failed_requests"] += 1
+        self.metrics["total_tokens"] += tokens
+        self.metrics["total_cost"] += cost
+        self.metrics["total_processing_time"] += processing_time
+
+        self.logger.info(
+            "Request completed",
+            extra={
+                "extra_fields": {
+                    "event": "request_complete",
+                    "success": success,
+                    "tokens": tokens,
+                    "cost": cost,
+                    "processing_time": processing_time,
+                    **extra
+                }
+            }
+        )
+
+    def log_batch_complete(self, batch_size: int, **extra) -> None:
+        """Log batch completion with cumulative metrics."""
+        self.logger.info(
+            f"Batch of {batch_size} completed",
+            extra={
+                "extra_fields": {
+                    "event": "batch_complete",
+                    "batch_size": batch_size,
+                    "cumulative_metrics": self.metrics.copy(),
+                    **extra
+                }
+            }
+        )
+
+    def get_metrics(self) -> dict:
+        """Get current metrics."""
+        return self.metrics.copy()
+
+    def reset_metrics(self) -> None:
+        """Reset all metrics."""
+        for key in self.metrics:
+            if isinstance(self.metrics[key], int):
+                self.metrics[key] = 0
+            else:
+                self.metrics[key] = 0.0
