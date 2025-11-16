@@ -134,23 +134,42 @@ class RobBERTSentiment(SentimentBackend):
                 error="Model not available"
             )
 
+        if not text or not text.strip():
+            logger.warning(f"{self.name}: Empty text provided")
+            return SentimentResult(
+                label="neutral",
+                score=0.5,
+                raw_scores={},
+                processing_time=0.0,
+                backend=self.name,
+                error="Empty text"
+            )
+
         start_time = time.time()
         try:
             # Truncate text if too long (BERT has 512 token limit)
-            max_length = 512
+            original_length = len(text)
             truncated_text = text[:4000]  # Rough char limit
 
+            if original_length > 4000:
+                logger.debug(f"{self.name}: Truncated text from {original_length} to 4000 chars")
+
+            logger.debug(f"{self.name}: Analyzing text ({len(truncated_text)} chars)")
             result = self._pipeline(truncated_text)[0]
             processing_time = time.time() - start_time
 
             # Map labels to standard format
-            label = result['label'].lower()
+            original_label = result['label']
+            label = original_label.lower()
             if label in ['positive', 'pos', '1']:
                 label = 'positive'
             elif label in ['negative', 'neg', '0']:
                 label = 'negative'
             else:
                 label = 'neutral'
+                logger.debug(f"{self.name}: Mapped unknown label '{original_label}' to 'neutral'")
+
+            logger.debug(f"{self.name}: Result={label}, score={result['score']:.3f}, time={processing_time:.3f}s")
 
             return SentimentResult(
                 label=label,
@@ -176,13 +195,19 @@ class RobBERTSentiment(SentimentBackend):
         if not self.is_available():
             return [self.analyze("") for _ in texts]
 
+        if not texts:
+            logger.warning("Empty text list provided for batch analysis")
+            return []
+
         start_time = time.time()
         try:
             # Truncate texts
             truncated = [t[:4000] for t in texts]
+            logger.debug(f"Batch processing {len(texts)} texts")
             results = self._pipeline(truncated)
             total_time = time.time() - start_time
             avg_time = total_time / len(texts)
+            logger.info(f"Batch analysis completed: {len(texts)} texts in {total_time:.2f}s ({avg_time:.3f}s/text)")
 
             sentiment_results = []
             for result in results:

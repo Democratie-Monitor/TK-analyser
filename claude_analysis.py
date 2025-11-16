@@ -50,10 +50,37 @@ class AnalysisConfig:
         batch_size: int = 10
     ):
         """Initialize configuration."""
+        # Validate parameters
+        if min_length < 0:
+            logger.warning(f"min_length ({min_length}) should be >= 0, using 0")
+            min_length = 0
+
+        if sample_size < 0:
+            logger.warning(f"sample_size ({sample_size}) should be >= 0, using 0")
+            sample_size = 0
+
+        if not 0.0 <= temperature <= 2.0:
+            logger.warning(f"temperature ({temperature}) should be 0-2, clamping")
+            temperature = max(0.0, min(2.0, temperature))
+
+        if max_retries < 0:
+            logger.warning(f"max_retries ({max_retries}) should be >= 0, using 0")
+            max_retries = 0
+
+        if batch_size < 1:
+            logger.warning(f"batch_size ({batch_size}) should be >= 1, using 1")
+            batch_size = 1
+
         self.csv_path = csv_path
         self.prompt_path = prompt_path
         self.output_dir = output_dir
-        self.output_mode = OutputMode(output_mode)
+
+        try:
+            self.output_mode = OutputMode(output_mode)
+        except ValueError:
+            logger.error(f"Invalid output_mode: {output_mode}. Must be concise/standard/elaborate")
+            raise
+
         self.min_length = min_length
         self.sample_size = sample_size
         self.random_state = random_state
@@ -62,11 +89,27 @@ class AnalysisConfig:
         self.save_intermediate = save_intermediate
         self.batch_size = batch_size
 
+        logger.debug(f"Config initialized: {self.to_dict()}")
+
     @classmethod
     def from_yaml(cls, path: str) -> 'AnalysisConfig':
         """Load configuration from YAML file."""
-        with open(path, 'r') as f:
-            data = yaml.safe_load(f)
+        logger.info(f"Loading config from {path}")
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            logger.error(f"Failed to parse YAML config: {e}")
+            raise
+        except FileNotFoundError:
+            logger.error(f"Config file not found: {path}")
+            raise
+
+        if data is None:
+            logger.error(f"Empty config file: {path}")
+            raise ValueError(f"Config file is empty: {path}")
+
+        logger.debug(f"Loaded config data: {data}")
         return cls(**data)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -125,15 +168,42 @@ class TKAnalyzer:
         all_dfs = []
         for file_path in speech_files:
             logger.info(f"Loading {file_path}")
-            df = pd.read_csv(file_path)
-            df['source_file'] = os.path.basename(file_path)
-            all_dfs.append(df)
+            try:
+                df = pd.read_csv(file_path)
+                df['source_file'] = os.path.basename(file_path)
+
+                # Validate required columns
+                required_cols = ['speech_text', 'speaker_name', 'speaker_party']
+                missing_cols = [col for col in required_cols if col not in df.columns]
+                if missing_cols:
+                    logger.error(f"Missing required columns in {file_path}: {missing_cols}")
+                    raise ValueError(f"CSV missing required columns: {missing_cols}")
+
+                logger.debug(f"Loaded {len(df)} rows from {file_path}")
+                all_dfs.append(df)
+            except pd.errors.ParserError as e:
+                logger.error(f"Failed to parse CSV {file_path}: {e}")
+                raise
 
         self.df = pd.concat(all_dfs, ignore_index=True)
+        logger.info(f"Combined {len(all_dfs)} files with total {len(self.df)} rows")
 
         # Convert date column
         if 'date' in self.df.columns:
+            original_dates = self.df['date'].copy()
             self.df['date'] = pd.to_datetime(self.df['date'], errors='coerce')
+            failed_dates = self.df['date'].isna().sum() - original_dates.isna().sum()
+            if failed_dates > 0:
+                logger.warning(f"Failed to parse {failed_dates} date values")
+        else:
+            logger.warning("No 'date' column found in data")
+            self.df['date'] = pd.NaT
+
+        # Check for null speech texts
+        null_speeches = self.df['speech_text'].isna().sum()
+        if null_speeches > 0:
+            logger.warning(f"Found {null_speeches} null speech texts, dropping them")
+            self.df = self.df.dropna(subset=['speech_text'])
 
         # Filter by minimum length
         original_count = len(self.df)
@@ -143,6 +213,11 @@ class TKAnalyzer:
             f"Loaded {len(self.df)} speeches "
             f"(filtered {original_count - len(self.df)} short speeches)"
         )
+
+        # Log data statistics
+        logger.debug(f"Dataset memory usage: {self.df.memory_usage(deep=True).sum() / 1024 / 1024:.2f} MB")
+        logger.debug(f"Unique parties: {self.df['speaker_party'].nunique()}")
+        logger.debug(f"Date range: {self.df['date'].min()} to {self.df['date'].max()}")
 
     def analyze_single_speech(self, speech_row: pd.Series) -> Dict[str, Any]:
         """
@@ -156,6 +231,19 @@ class TKAnalyzer:
         """
         speech_text = speech_row['speech_text']
 
+        # Validate speech text
+        if not speech_text or not isinstance(speech_text, str):
+            logger.warning(f"Invalid speech text for {speech_row.get('speaker_name', 'Unknown')}")
+            speech_text = str(speech_text) if speech_text else ""
+
+        if len(speech_text) > 100000:
+            logger.warning(f"Very long speech ({len(speech_text)} chars), may cause issues")
+
+        logger.debug(
+            f"Analyzing speech: {speech_row.get('speaker_name', 'Unknown')} "
+            f"({speech_row.get('speaker_party', 'Unknown')}), {len(speech_text)} chars"
+        )
+
         result = self.processor.process_text(
             text=speech_text,
             system_prompt=self.prompt_config.system_prompt,
@@ -164,12 +252,23 @@ class TKAnalyzer:
             temperature=self.config.temperature
         )
 
+        # Safely format date
+        date_str = 'Unknown'
+        date_val = speech_row.get('date')
+        if pd.notna(date_val):
+            if hasattr(date_val, 'strftime'):
+                date_str = date_val.strftime('%Y-%m-%d')
+            else:
+                # Date might be string already
+                date_str = str(date_val)
+                logger.debug(f"Date is string, not datetime: {date_str}")
+
         # Build result structure
         analysis_entry = {
             "speech_metadata": {
                 "speaker_name": speech_row.get('speaker_name', 'Unknown'),
                 "speaker_party": speech_row.get('speaker_party', 'Unknown'),
-                "date": speech_row['date'].strftime('%Y-%m-%d') if pd.notna(speech_row.get('date')) else 'Unknown',
+                "date": date_str,
                 "text_length": len(speech_text),
                 "source_file": speech_row.get('source_file', 'Unknown')
             },
@@ -182,6 +281,11 @@ class TKAnalyzer:
             },
             "findings": result.data
         }
+
+        if result.success:
+            logger.debug(f"Analysis successful: {result.response_time:.2f}s, {result.token_usage.total_tokens} tokens")
+        else:
+            logger.warning(f"Analysis failed: {result.error}")
 
         return analysis_entry
 

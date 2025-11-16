@@ -95,12 +95,25 @@ class ClaudeProcessor:
             max_delay: Maximum delay between retries (seconds)
             timeout: Request timeout in seconds
         """
-        self.client = anthropic.Anthropic(api_key=api_key)
+        try:
+            self.client = anthropic.Anthropic(api_key=api_key)
+            logger.info(f"Initialized Anthropic client for model: {model}")
+        except anthropic.AuthenticationError as e:
+            logger.error(f"Authentication failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to initialize Anthropic client: {e}")
+            raise
+
         self.model = model
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.max_delay = max_delay
         self.timeout = timeout
+
+        # Validate model pricing
+        if model not in self.PRICING:
+            logger.warning(f"Model {model} not in pricing table, using default pricing")
 
         # Track cumulative token usage
         self.total_usage = TokenUsage()
@@ -136,8 +149,22 @@ class ClaudeProcessor:
         elif output_mode == OutputMode.ELABORATE:
             max_tokens = max(max_tokens, 8192)
 
-        # Format the user prompt with the text
-        formatted_prompt = user_prompt.format(text=text)
+        # Validate and format the user prompt with the text
+        if '{text}' not in user_prompt:
+            logger.error("User prompt missing {text} placeholder")
+            raise ValueError("User prompt must contain {text} placeholder")
+
+        # Log analysis parameters
+        logger.debug(f"Processing text: {len(text)} chars, mode={output_mode.value}")
+        logger.debug(f"API config: model={self.model}, temp={temperature}, max_tokens={max_tokens}")
+
+        try:
+            formatted_prompt = user_prompt.format(text=text)
+        except KeyError as e:
+            logger.error(f"Prompt formatting failed, missing key: {e}")
+            raise ValueError(f"Prompt template missing required placeholder: {e}")
+
+        logger.debug(f"Formatted prompt length: {len(formatted_prompt)} chars")
 
         last_error = None
         token_usage = TokenUsage()
@@ -248,14 +275,28 @@ class ClaudeProcessor:
     def _parse_response(self, response) -> Dict[str, Any]:
         """Parse Claude's response and extract JSON data."""
         if not response.content:
+            logger.error("Empty response.content from Claude API")
             raise ValueError("Empty response from Claude")
 
+        if len(response.content) == 0:
+            logger.error("Response content list is empty")
+            raise ValueError("Empty response content list from Claude")
+
+        # Log response metadata
+        logger.debug(f"Response stop_reason: {response.stop_reason}")
+        logger.debug(f"Response content blocks: {len(response.content)}")
+
         text_content = response.content[0].text.strip()
+        logger.debug(f"Raw response length: {len(text_content)} chars")
+        logger.debug(f"Response preview: {text_content[:200]}...")
 
         # Try direct JSON parsing first
         try:
-            return json.loads(text_content)
-        except json.JSONDecodeError:
+            parsed = json.loads(text_content)
+            logger.debug("Successfully parsed response as direct JSON")
+            return parsed
+        except json.JSONDecodeError as e:
+            logger.debug(f"Direct JSON parse failed: {e}")
             pass
 
         # Try to extract JSON from markdown code blocks
@@ -265,8 +306,11 @@ class ClaudeProcessor:
             if end > start:
                 json_str = text_content[start:end].strip()
                 try:
-                    return json.loads(json_str)
-                except json.JSONDecodeError:
+                    parsed = json.loads(json_str)
+                    logger.debug("Successfully parsed JSON from ```json block")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.debug(f"JSON parse from ```json block failed: {e}")
                     pass
 
         # Try to extract JSON from plain code blocks
@@ -276,15 +320,21 @@ class ClaudeProcessor:
             if end > start:
                 json_str = text_content[start:end].strip()
                 try:
-                    return json.loads(json_str)
-                except json.JSONDecodeError:
+                    parsed = json.loads(json_str)
+                    logger.debug("Successfully parsed JSON from ``` block")
+                    return parsed
+                except json.JSONDecodeError as e:
+                    logger.debug(f"JSON parse from ``` block failed: {e}")
                     pass
 
         # Try to find JSON object directly
+        logger.debug("Attempting to extract JSON object from text")
         json_data = self._extract_json_object(text_content)
         if json_data:
+            logger.debug("Successfully extracted JSON object from text")
             return json_data
 
+        logger.error(f"No valid JSON found in response. Content: {text_content[:500]}...")
         raise json.JSONDecodeError("No valid JSON found in response", text_content, 0)
 
     def _extract_json_object(self, text: str) -> Optional[Dict]:
